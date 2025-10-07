@@ -1,0 +1,686 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aura Roller Economy</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Custom Font and Dark Background */
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #111827; /* dark blue/gray */
+        }
+        
+        /* --- Rarity Color Classes (for Text and History) --- */
+        .color-common { color: #9ca3af; } /* gray */
+        .color-uncommon { color: #34d399; } /* emerald */
+        .color-rare { color: #60a5fa; } /* blue */
+        .color-epic { color: #a855f7; } /* violet */
+        .color-legendary { color: #f59e0b; } /* amber */
+        .color-mythic { color: #22d3ee; } /* cyan */
+        /* --- Secret Aura Color --- */
+        .color-secret { color: #f472b6; } /* pink-400 (Deep Magenta) */
+
+
+        /* --- Text Glow Effects --- */
+        .glow-common { text-shadow: 0 0 10px rgba(156, 163, 175, 0.6); }
+        .glow-uncommon { text-shadow: 0 0 15px rgba(52, 211, 153, 0.8); }
+        .glow-rare { text-shadow: 0 0 20px rgba(96, 165, 250, 1); }
+        .glow-epic { text-shadow: 0 0 25px rgba(168, 85, 247, 1); }
+        .glow-legendary { text-shadow: 0 0 30px rgba(245, 158, 11, 1.2); }
+        .glow-mythic { text-shadow: 0 0 40px rgba(34, 211, 238, 1.5); } 
+        /* --- Secret Aura Glow --- */
+        .glow-secret { text-shadow: 0 0 50px rgba(244, 114, 182, 2.0); } 
+
+        /* --- Aura Border/Shadow Effects (The main "Aura on the side" effect) --- */
+        #result-display-block {
+            /* The transition smooths the color and shadow change */
+            transition: border-color 0.5s ease-out, box-shadow 0.5s ease-out;
+            background-color: #1f2937; /* Darker internal color */
+            border-style: solid;
+            border-width: 6px; /* Thick border for the visual "side" effect */
+            border-color: #374151; /* Default border color */
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.5); /* Default shadow */
+            min-height: 250px;
+        }
+
+        #aura-image {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+            border-radius: 6px;
+        }
+
+        /* CSS variables for box-shadow color and intensity */
+        .shadow-common { border-color: #9ca3af; box-shadow: 0 0 20px 5px rgba(156, 163, 175, 0.4); }
+        .shadow-uncommon { border-color: #34d399; box-shadow: 0 0 30px 8px rgba(52, 211, 153, 0.6); }
+        .shadow-rare { border-color: #60a5fa; box-shadow: 0 0 40px 10px rgba(96, 165, 250, 0.8); }
+        .shadow-epic { border-color: #a855f7; box-shadow: 0 0 50px 12px rgba(168, 85, 247, 1); }
+        .shadow-legendary { border-color: #f59e0b; box-shadow: 0 0 60px 15px rgba(245, 158, 11, 1.2); }
+        .shadow-mythic { border-color: #22d3ee; box-shadow: 0 0 80px 20px rgba(34, 211, 238, 1.5); } 
+        /* --- Secret Aura Shadow --- */
+        .shadow-secret { border-color: #f472b6; box-shadow: 0 0 100px 30px rgba(244, 114, 182, 2.5); }
+
+        /* --- Animations --- */
+
+        /* Rolling Text Animation - Spin the text's vertical position slightly */
+        @keyframes roll-spin {
+            0% { transform: translateY(0); opacity: 1; filter: blur(0); }
+            50% { transform: translateY(-5px); opacity: 0.8; filter: blur(2px); }
+            100% { transform: translateY(0); opacity: 1; filter: blur(0); }
+        }
+        .rolling-animation {
+            animation: roll-spin 0.1s ease-in-out infinite alternate;
+        }
+        
+        /* Loading spinner animation */
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        .spinner {
+            border: 4px solid rgba(255, 255, 255, 0.3);
+            border-top-color: #fff;
+            border-radius: 50%;
+            width: 2.5rem;
+            height: 2.5rem;
+            animation: spin 1s ease-in-out infinite;
+        }
+
+        /* Custom scrollbar for history */
+        #history-log::-webkit-scrollbar {
+            width: 6px;
+        }
+        #history-log::-webkit-scrollbar-thumb {
+            background-color: #374151; /* gray-700 */
+            border-radius: 3px;
+        }
+    </style>
+</head>
+<body class="text-white flex flex-col items-center justify-center min-h-screen p-4">
+
+    <div class="bg-gray-800 w-full max-w-xl p-8 rounded-xl shadow-2xl border border-gray-700">
+        
+        <!-- Header & Coin Display -->
+        <header class="text-center mb-6">
+            <h1 class="text-4xl md:text-5xl font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-teal-400 to-blue-500">
+                Aura Roller Economy
+            </h1>
+            <div class="mt-4 p-2 bg-yellow-900/50 rounded-lg inline-flex items-center space-x-2">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fcd34d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-6 h-6"><circle cx="12" cy="12" r="10"></circle><path d="M16 8h-4c-1.1 0-2 .9-2 2s.9 2 2 2h4"></path><path d="M8 16h4c1.1 0 2-.9 2-2s-.9-2-2-2H8"></path><path d="M9 20v-1m0-16v1"></path><path d="M15 20v-1m0-16v1"></path></svg>
+                <span class="text-xl font-bold text-yellow-300">Coins:</span>
+                <span id="coin-display" class="text-2xl font-extrabold text-yellow-500">1,000</span>
+            </div>
+        </header>
+        
+        <!-- --- UPGRADES SECTION --- -->
+        <div class="bg-gray-700/50 p-4 rounded-xl mb-6 border border-gray-600">
+            <h2 class="text-xl font-semibold mb-3 text-gray-300 border-b border-gray-600 pb-2">Upgrades</h2>
+            <div class="flex flex-col space-y-4">
+                
+                <!-- Luck Upgrade -->
+                <div class="p-3 bg-gray-900 rounded-lg flex justify-between items-center">
+                    <div>
+                        <p class="font-bold text-amber-400">Luck Upgrade</p>
+                        <p class="text-sm text-gray-400">Increase Max Luck Boost (Current Max: <span id="max-luck-display">0%</span>)</p>
+                    </div>
+                    <button id="buy-luck-upgrade" onclick="buyLuckUpgrade()"
+                            class="px-4 py-2 bg-green-600 hover:bg-green-700 font-semibold rounded-lg text-sm disabled:opacity-50 transition-all">
+                        Buy Luck LVL 1 (1000 Coins)
+                    </button>
+                </div>
+
+                <!-- Speed Upgrade -->
+                <div class="p-3 bg-gray-900 rounded-lg flex justify-between items-center">
+                    <div>
+                        <p class="font-bold text-indigo-400">Roll Speed Upgrade</p>
+                        <p class="text-sm text-gray-400">Reduce roll animation time (Current: <span id="current-speed-display">750ms</span>)</p>
+                    </div>
+                    <button id="buy-speed-upgrade" onclick="buySpeedUpgrade()"
+                            class="px-4 py-2 bg-green-600 hover:bg-green-700 font-semibold rounded-lg text-sm disabled:opacity-50 transition-all">
+                        Buy Speed LVL 1 (500 Coins)
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- --- LUCK CONTROL --- -->
+        <div class="bg-gray-700/50 p-4 rounded-xl mb-6 flex flex-col md:flex-row items-center justify-between space-y-3 md:space-y-0 md:space-x-4 border border-gray-600">
+            <div class="text-sm font-medium text-gray-300 flex items-center space-x-2">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 17a5 5 0 0 0-10 0v-4l5.3 5.3a2 2 0 0 1 2.4.4l3.1-3.1a2 2 0 0 1 .4-2.4l5.3-5.3v-4a5 5 0 0 0-10 0z"></path></svg>
+                <span>Active Luck Boost (Max: <span id="max-luck-input-display">0%</span>):</span>
+                <span id="active-luck" class="font-bold text-lg text-amber-300">0%</span>
+            </div>
+            <div class="flex space-x-2 w-full md:w-auto">
+                <input type="number" id="luck-input" placeholder="0" min="0" max="0" value="0"
+                       class="w-full md:w-20 px-3 py-2 bg-gray-900 border border-gray-600 rounded-lg text-white focus:ring-amber-500 focus:border-amber-500">
+                <button id="apply-luck-button" 
+                        class="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white font-semibold rounded-lg shadow transition-all transform active:scale-95">
+                    Apply
+                </button>
+            </div>
+        </div>
+
+
+        <!-- --- MAIN AURA DISPLAY BLOCK (Frame with Aura Border) --- -->
+        <div id="result-display-block" 
+             class="flex flex-col items-center justify-center mb-6 p-6 rounded-xl shadow-2xl space-y-4">
+            
+            <!-- Generated Aura Image -->
+            <img id="aura-image" src="https://placehold.co/500x200/1f2937/9ca3af?text=Roll+to+Generate+Aura" 
+                 alt="Generated Aura Image" class="transition-all duration-500" />
+            
+            <!-- API Error Message Display - MOVED INSIDE BLOCK -->
+            <p id="api-error-message" class="text-red-400 font-semibold text-center p-3 bg-red-900/50 rounded-lg w-full" style="display: none;"></p>
+            
+            <!-- Result Text -->
+            <p id="result-name" class="text-3xl md:text-4xl font-extrabold transition-all duration-500 color-common glow-common">
+                Roll to Begin
+            </p>
+            <p id="roll-value" class="text-md text-gray-500 transition-all duration-500">
+                (Last Roll: --)
+            </p>
+        </div>
+        
+        <!-- --- ACTIVATE BUTTON AND LOADER --- -->
+        <div class="flex flex-col items-center justify-center">
+            <button id="roll-button" 
+                class="w-full py-4 mb-4 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white text-xl font-bold rounded-xl shadow-lg transition-all transform active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed">
+                Activate Aura
+            </button>
+            <div id="image-loader" class="text-teal-300 flex items-center gap-3 mb-4" style="display: none;">
+                <div class="spinner"></div>
+                <span id="loader-message">Generating Mythic Aura Image...</span>
+            </div>
+        </div>
+
+        <!-- Rarity Information and History Container -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            
+            <!-- Rarity Table & Payouts -->
+            <div class="bg-gray-700/50 p-4 rounded-lg">
+                <h3 class="text-lg font-semibold mb-3 text-gray-300 border-b border-gray-600 pb-2">Rarity Odds & Payouts</h3>
+                <ul id="rarity-table" class="space-y-1 text-sm">
+                    <!-- Rarity tiers will be populated by JS -->
+                </ul>
+            </div>
+
+            <!-- Roll History -->
+            <div class="bg-gray-700/50 p-4 rounded-lg">
+                <h3 class="text-lg font-semibold mb-3 text-gray-300 border-b border-gray-600 pb-2">Roll History</h3>
+                <div id="history-log" class="space-y-2 text-sm h-40 overflow-y-auto">
+                    <!-- History items will be appended here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- Gemini API Configuration ---
+        const apiKey = ""; 
+        const IMAGE_MODEL = 'gemini-2.5-flash-image-preview';
+        const BASE_IMAGE_URL = `https://generativelanguage.googleapis.com/v1beta/models/${IMAGE_MODEL}:generateContent`;
+        const imageApiUrl = `${BASE_IMAGE_URL}?key=${apiKey}`; 
+
+        // --- Game Data and Configuration ---
+        const RARITY_TIERS = [
+            // Tiers MUST be sorted from RAREST to COMMON for cumulative probability checking.
+            // ADDED coinValue for payouts
+            
+            // 1. Secret Aura (0.1%)
+            { 
+                name: "Secret Aura", 
+                probability: 0.1, 
+                maxRoll: 0.001, 
+                colorClass: "color-secret", 
+                glowClass: "glow-secret", 
+                tailwindColor: "border-pink-400", 
+                shadowClass: "shadow-secret", 
+                promptColor: "Shimmering Deep Magenta and Gold",
+                coinValue: 5000
+            },
+            // 2. Mythic Aura (0.5%)
+            { 
+                name: "Mythic Aura", 
+                probability: 0.5, 
+                maxRoll: 0.006, 
+                colorClass: "color-mythic", 
+                glowClass: "glow-mythic", 
+                tailwindColor: "border-cyan-400", 
+                shadowClass: "shadow-mythic", 
+                promptColor: "Cyan/Aqua",
+                coinValue: 1000
+            },
+            // 3. Legendary Aura (2.0%)
+            { 
+                name: "Legendary Aura", 
+                probability: 2.0, 
+                maxRoll: 0.026, 
+                colorClass: "color-legendary", 
+                glowClass: "glow-legendary", 
+                tailwindColor: "border-amber-500", 
+                shadowClass: "shadow-legendary", 
+                promptColor: "Gold/Amber",
+                coinValue: 500
+            },
+            // 4. Epic Aura (5.0%)
+            { 
+                name: "Epic Aura", 
+                probability: 5.0, 
+                maxRoll: 0.076, 
+                colorClass: "color-epic", 
+                glowClass: "glow-epic", 
+                tailwindColor: "border-violet-500", 
+                shadowClass: "shadow-epic", 
+                promptColor: "Deep Violet",
+                coinValue: 100
+            },
+            // 5. Rare Aura (15.0%)
+            { 
+                name: "Rare Aura", 
+                probability: 15.0, 
+                maxRoll: 0.226, 
+                colorClass: "color-rare", 
+                glowClass: "glow-rare", 
+                tailwindColor: "border-blue-500", 
+                shadowClass: "shadow-rare", 
+                promptColor: "Vibrant Blue",
+                coinValue: 50
+            },
+            // 6. Uncommon Aura (25.0%)
+            { 
+                name: "Uncommon Aura", 
+                probability: 25.0, 
+                maxRoll: 0.476, 
+                colorClass: "color-uncommon", 
+                glowClass: "glow-uncommon", 
+                tailwindColor: "border-emerald-500", 
+                shadowClass: "shadow-uncommon", 
+                promptColor: "Bright Green",
+                coinValue: 25
+            },
+            // 7. Common Aura (52.4%) - Adjusted to meet 100% total
+            { 
+                name: "Common Aura", 
+                probability: 52.4, 
+                maxRoll: 1.0000, 
+                colorClass: "color-common", 
+                glowClass: "glow-common", 
+                tailwindColor: "border-gray-500", 
+                shadowClass: "shadow-common", 
+                promptColor: "Smoky Gray",
+                coinValue: 10
+            },
+        ];
+
+        // --- Game State & Configuration ---
+        let userCoins = 1000; // Starting coins
+        let currentLuckBoost = 0; // The decimal value actively applied from input (0.0 to 0.5)
+        let luckUpgradeLevel = 0;
+        let rollSpeedLevel = 0;
+        
+        // Configurable Upgrade Values
+        const MAX_LUCK_LEVEL = 10; // Max 50% luck (5% per level)
+        const MAX_SPEED_LEVEL = 2; // Max 2 speed upgrades
+        
+        const LUCK_UPGRADE_COST = 1000;
+        const SPEED_UPGRADE_COST = 500;
+        const LUCK_BOOST_PER_LEVEL = 0.05; // 5% increase in max luck per level (0.05)
+        const BASE_ROLL_DURATION_MS = 750; // Initial roll speed
+        const SPEED_DECREMENT_MS = 250; // Speed reduction per level (750 -> 500 -> 250)
+        
+        const historyLimit = 6;
+        
+        // --- DOM Elements ---
+        const rollButton = document.getElementById('roll-button');
+        const resultName = document.getElementById('result-name');
+        const rollValueDisplay = document.getElementById('roll-value');
+        const historyLog = document.getElementById('history-log');
+        const rarityTable = document.getElementById('rarity-table');
+        const resultDisplayBlock = document.getElementById('result-display-block');
+
+        // Upgrade/Coin Elements
+        const coinDisplay = document.getElementById('coin-display');
+        const luckInput = document.getElementById('luck-input');
+        const applyLuckButton = document.getElementById('apply-luck-button');
+        const activeLuckDisplay = document.getElementById('active-luck');
+        const maxLuckDisplay = document.getElementById('max-luck-display');
+        const maxLuckInputDisplay = document.getElementById('max-luck-input-display');
+        const buyLuckButton = document.getElementById('buy-luck-upgrade');
+        const buySpeedButton = document.getElementById('buy-speed-upgrade');
+        const currentSpeedDisplay = document.getElementById('current-speed-display');
+
+        // LLM Image Elements
+        const auraImage = document.getElementById('aura-image');
+        const imageLoader = document.getElementById('image-loader');
+        const loaderMessage = document.getElementById('loader-message');
+        const apiErrorMessage = document.getElementById('api-error-message'); 
+
+        // --- Utility to clear all custom dynamic classes ---
+        const ALL_GLOW_CLASSES = [
+            ...RARITY_TIERS.map(t => t.colorClass),
+            ...RARITY_TIERS.map(t => t.glowClass),
+            ...RARITY_TIERS.map(t => t.shadowClass) 
+        ];
+
+        // --- Core UI Update Function ---
+
+        /**
+         * Updates all dynamic UI elements related to state (Coins, Upgrades).
+         */
+        function updateUI() {
+            // 1. Update Coins
+            coinDisplay.textContent = userCoins.toLocaleString();
+
+            // 2. Update Luck Section
+            const maxLuckPercent = luckUpgradeLevel * (LUCK_BOOST_PER_LEVEL * 100);
+            luckInput.max = maxLuckPercent;
+            maxLuckDisplay.textContent = `${maxLuckPercent.toFixed(0)}%`;
+            maxLuckInputDisplay.textContent = `${maxLuckPercent.toFixed(0)}%`;
+            
+            // Re-validate the luck input to ensure it doesn't exceed the new max
+            let luckValue = parseFloat(luckInput.value);
+            if (luckValue > maxLuckPercent || isNaN(luckValue) || luckValue < 0) {
+                 luckValue = 0;
+            }
+            luckInput.value = luckValue;
+            currentLuckBoost = luckValue / 100;
+            activeLuckDisplay.textContent = `${luckValue}%`;
+
+            // 3. Update Luck Upgrade Button
+            buyLuckButton.textContent = `Buy Luck LVL ${luckUpgradeLevel + 1} (${LUCK_UPGRADE_COST} Coins)`;
+            buyLuckButton.disabled = userCoins < LUCK_UPGRADE_COST || luckUpgradeLevel >= MAX_LUCK_LEVEL;
+            if (luckUpgradeLevel >= MAX_LUCK_LEVEL) {
+                 buyLuckButton.textContent = "MAX LUCK LVL";
+            }
+
+            // 4. Update Speed Upgrade Button and Display
+            const effectiveRollDuration = BASE_ROLL_DURATION_MS - (rollSpeedLevel * SPEED_DECREMENT_MS);
+            currentSpeedDisplay.textContent = `${effectiveRollDuration}ms`;
+            
+            buySpeedButton.textContent = `Buy Speed LVL ${rollSpeedLevel + 1} (${SPEED_UPGRADE_COST} Coins)`;
+            buySpeedButton.disabled = userCoins < SPEED_UPGRADE_COST || rollSpeedLevel >= MAX_SPEED_LEVEL;
+            if (rollSpeedLevel >= MAX_SPEED_LEVEL) {
+                 buySpeedButton.textContent = "MAX SPEED LVL";
+            }
+        }
+        
+        // --- Upgrade Functions ---
+
+        function buyLuckUpgrade() {
+            if (userCoins >= LUCK_UPGRADE_COST && luckUpgradeLevel < MAX_LUCK_LEVEL) {
+                userCoins -= LUCK_UPGRADE_COST;
+                luckUpgradeLevel++;
+                updateUI();
+            } else if (luckUpgradeLevel >= MAX_LUCK_LEVEL) {
+                 console.log("Luck is already max level.");
+            } else {
+                 console.log("Not enough coins for luck upgrade.");
+            }
+        }
+
+        function buySpeedUpgrade() {
+            if (userCoins >= SPEED_UPGRADE_COST && rollSpeedLevel < MAX_SPEED_LEVEL) {
+                userCoins -= SPEED_UPGRADE_COST;
+                rollSpeedLevel++;
+                updateUI();
+            } else if (rollSpeedLevel >= MAX_SPEED_LEVEL) {
+                 console.log("Speed is already max level.");
+            } else {
+                 console.log("Not enough coins for speed upgrade.");
+            }
+        }
+
+        function applyLuckBoost() {
+            const maxLuckPercent = luckUpgradeLevel * (LUCK_BOOST_PER_LEVEL * 100);
+            let luckValue = parseFloat(luckInput.value);
+            
+            // Input validation and clamping
+            if (isNaN(luckValue) || luckValue < 0) {
+                luckValue = 0;
+            } else if (luckValue > maxLuckPercent) {
+                luckValue = maxLuckPercent; // Clamp to current max allowed
+            }
+
+            luckInput.value = luckValue; // Update input to the clamped value
+            currentLuckBoost = luckValue / 100; // Store as decimal (0.0 to 0.5)
+            activeLuckDisplay.textContent = `${luckValue}%`;
+            
+            // Simple visual feedback on the button
+            applyLuckButton.textContent = 'Applied!';
+            setTimeout(() => {
+                 applyLuckButton.textContent = 'Apply';
+            }, 500);
+        }
+
+        // --- Rarity & Roll Logic ---
+
+        /**
+         * Populates the Rarity Odds and Payouts table on load.
+         */
+        function initializeRarityTable() {
+            const displayTiers = [...RARITY_TIERS].sort((a, b) => a.maxRoll - b.maxRoll);
+
+            rarityTable.innerHTML = ''; 
+
+            displayTiers.forEach(tier => {
+                const listItem = document.createElement('li');
+                const displayProbability = tier.probability;
+
+                listItem.className = `flex justify-between items-center ${tier.colorClass} border-l-4 pl-2 ${tier.tailwindColor}`;
+                listItem.innerHTML = `
+                    <span class="font-medium">${tier.name}</span>
+                    <span class="flex items-center space-x-2">
+                        <span class="font-medium text-gray-400">${displayProbability.toFixed(2)}%</span>
+                        <span class="text-yellow-300 font-bold">${tier.coinValue} C</span>
+                    </span>
+                `;
+                rarityTable.appendChild(listItem);
+            });
+        }
+
+        /**
+         * Determines the aura rarity based on the random roll value.
+         * @param {number} roll - The random number (0.00 to 1.00).
+         * @returns {object} The matching rarity tier object.
+         */
+        function getAuraResult(roll) {
+            for (const tier of RARITY_TIERS) {
+                if (roll <= tier.maxRoll) {
+                    return tier;
+                }
+            }
+            return RARITY_TIERS.find(t => t.name.startsWith("Common")); 
+        }
+        
+        /**
+         * Generates an image for the given rarity using the Gemini API (omitted for brevity, keeping original logic)
+         * @param {object} result - The rarity tier object.
+         */
+        async function generateAndDisplayImage(result) {
+            const rarityName = result.name;
+            const colorName = result.promptColor;
+
+            apiErrorMessage.style.display = 'none';
+            apiErrorMessage.textContent = '';
+            let authFailed = false; 
+
+            imageLoader.style.display = 'flex';
+            loaderMessage.textContent = `Generating ${rarityName} image...`;
+
+            const imagePrompt = `A stylized, vibrant, glowing cosmic aura representing the rarity '${rarityName}' on a dark, mystical background. The aura should be abstract and highly detailed, reflecting the power and color associated with its rarity. Use the color ${colorName}. Cinematic lighting, 4k, digital art, 16:9 aspect ratio.`;
+            
+            const payload = {
+                contents: [{ parts: [{ text: imagePrompt }] }],
+                generationConfig: {
+                    responseModalities: ['IMAGE']
+                },
+            };
+            
+            const maxRetries = 5;
+            let delay = 1000;
+            let base64Data = null;
+            let success = false;
+
+            for (let i = 0; i < maxRetries; i++) {
+                try {
+                    const response = await fetch(imageApiUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+
+                    if (response.ok) {
+                        const resultJson = await response.json();
+                        base64Data = resultJson?.candidates?.[0]?.content?.parts?.find(p => p.inlineData)?.inlineData?.data;
+                        if (base64Data) {
+                            success = true;
+                            break; 
+                        }
+                    } else if (response.status === 401) {
+                        const onScreenMsg = "Authentication Failed (401). Please check the API key.";
+                        console.error("Image API Error:", onScreenMsg);
+                        apiErrorMessage.textContent = onScreenMsg;
+                        apiErrorMessage.style.display = 'block';
+                        authFailed = true; 
+                        break; 
+                    } else if (response.status === 429 && i < maxRetries - 1) {
+                        await new Promise(resolve => setTimeout(resolve, delay));
+                        delay *= 2;
+                    } else {
+                        let errorDetails = response.statusText;
+                        try {
+                            const errorJson = await response.json();
+                            errorDetails = errorJson.error ? errorJson.error.message : JSON.stringify(errorJson);
+                        } catch (e) {}
+                        console.error(`Image API Error (Status: ${response.status}): ${errorDetails}`);
+                        
+                        if (i < maxRetries - 1) {
+                            await new Promise(resolve => setTimeout(resolve, delay));
+                            delay *= 2;
+                        } else {
+                            break; 
+                        }
+                    }
+                } catch (error) {
+                    console.error("API Call failed (Network/Fetch Error):", error);
+                    if (i < maxRetries - 1) {
+                         await new Promise(resolve => setTimeout(resolve, delay));
+                         delay *= 2;
+                    } else {
+                        break;
+                    }
+                }
+            }
+            
+            if (success && base64Data) {
+                auraImage.src = `data:image/png;base64,${base64Data}`;
+                auraImage.alt = `A beautiful generated image of a ${rarityName}`;
+            } else if (authFailed) {
+                 auraImage.src = `https://placehold.co/500x200/a80000/ffffff?text=ERROR:+API+Key+Authentication+Failed`;
+                 auraImage.alt = "API Key Authentication Failed: Check your environment configuration.";
+            } else {
+                auraImage.src = `https://placehold.co/500x200/555/eee?text=Image+Generation+Failed`;
+                auraImage.alt = "Image generation failed.";
+            }
+
+            imageLoader.style.display = 'none';
+        }
+
+        /**
+         * Executes the main RNG roll process and initiates image generation.
+         */
+        function rollAura() {
+            rollButton.disabled = true;
+            rollButton.textContent = 'Rolling...';
+            
+            // Determine effective roll duration based on speed upgrade level
+            const effectiveRollDuration = BASE_ROLL_DURATION_MS - (rollSpeedLevel * SPEED_DECREMENT_MS);
+
+            // 1. Clear current display glow/color during roll
+            resultName.classList.remove(...ALL_GLOW_CLASSES);
+            resultDisplayBlock.classList.remove(...ALL_GLOW_CLASSES);
+            
+            // Set temporary state for rolling animation
+            resultName.classList.add('rolling-animation', 'text-gray-500', 'glow-common'); 
+            resultDisplayBlock.style.borderColor = '#374151';
+            resultDisplayBlock.style.boxShadow = '0 0 10px rgba(0, 0, 0, 0.5)';
+            auraImage.src = `https://placehold.co/500x200/1f2937/9ca3af?text=Rolling+...`;
+            
+            // 2. Calculate the Roll with Luck Modifier
+            const baseRoll = Math.random(); 
+            const modifiedRoll = baseRoll * (1 - currentLuckBoost); 
+            
+            setTimeout(() => {
+                
+                // 3. Get the Result
+                const result = getAuraResult(modifiedRoll); 
+                const rollPercentage = (modifiedRoll * 100).toFixed(4); 
+                
+                // 4. Update the Display Text
+                resultName.textContent = result.name;
+                rollValueDisplay.textContent = `(Modified Roll: ${rollPercentage}%)`;
+                resultName.classList.remove('rolling-animation', 'text-gray-500');
+                
+                // 5. Apply new aura styles 
+                resultName.classList.add(result.colorClass, result.glowClass);
+                resultDisplayBlock.classList.add(result.shadowClass);
+                
+                // 6. Coin Gain
+                userCoins += result.coinValue;
+                
+                // 7. Update History and UI
+                addHistoryEntry(result, rollPercentage, currentLuckBoost, result.coinValue); 
+                updateUI(); // Refresh coin display and button states
+                
+                // 8. Start image generation asynchronously and re-enable button immediately
+                generateAndDisplayImage(result);
+                rollButton.disabled = false;
+                rollButton.textContent = 'Activate Aura';
+
+            }, effectiveRollDuration);
+        }
+
+        /**
+         * Adds the result to the roll history log.
+         */
+        function addHistoryEntry(result, rollPercentage, luck, coinValue) {
+            const historyItem = document.createElement('div');
+            const luckPercent = (luck * 100).toFixed(0);
+            const borderClass = result.tailwindColor.replace('border-', 'border-');
+            
+            historyItem.className = `p-2 rounded-md bg-gray-700/70 border-l-4 ${borderClass} shadow-inner`;
+            historyItem.innerHTML = `
+                <span class="${result.colorClass} font-semibold">${result.name}</span> 
+                <span class="text-gray-400">(${rollPercentage}%)</span>
+                ${luck > 0 ? `<span class="text-amber-400 text-xs ml-2">[+${luckPercent}% Luck]</span>` : ''}
+                <span class="text-yellow-300 font-bold float-right">+${coinValue} C</span>
+            `;
+            
+            historyLog.prepend(historyItem);
+            
+            while (historyLog.children.length > historyLimit) {
+                historyLog.removeChild(historyLog.lastChild);
+            }
+        }
+
+        // --- Event Listeners ---
+        rollButton.addEventListener('click', rollAura);
+        applyLuckButton.addEventListener('click', applyLuckBoost);
+
+        // Assign upgrade functions to global scope for HTML onclick
+        window.buyLuckUpgrade = buyLuckUpgrade;
+        window.buySpeedUpgrade = buySpeedUpgrade;
+
+
+        // Run initialization on load
+        document.addEventListener('DOMContentLoaded', () => {
+            initializeRarityTable();
+            updateUI(); // Initial UI draw
+            // Ensure the initial state of the aura is set to common/default
+            resultName.classList.add('color-common', 'glow-common');
+            resultDisplayBlock.classList.add('shadow-common');
+        });
+    </script>
+</body>
+</html>
